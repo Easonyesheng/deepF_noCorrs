@@ -3,6 +3,10 @@ This file contains the utility to generate stero pairs from povray
 
 Note: [0,0,0] is Black, [255, 255, 255] is white.
 
+
+'''
+This code includes the 
+'''
 """
 import os
 import cv2
@@ -70,6 +74,8 @@ def get_translate_mat(tx, ty, tz):
         [-ty, tx,   0]
     ]).astype(np.float64)
 
+
+# get the camera parameters
 def get_intrinsic_mat(povray_cam):
     """
     Take parameters that specified a pair
@@ -245,7 +251,7 @@ def make_cali_img_pairs(w, h, loc, look_at, direct1, direct2,
 def abserr_pts_correspond(F, pts1, pts2):
     """
     err_pts_correspond(F, p, q, norm=n) will return the estimated errors
-    computed by 1/n sum_i (q_i^T F p_i)^2
+    computed by 1/n sum_i abs(q_i^T F p_i)
     """
     assert len(pts1) == len(pts2)
     err = 0.0

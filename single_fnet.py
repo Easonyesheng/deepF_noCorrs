@@ -1,5 +1,8 @@
 """
 Model for single network direct regression
+'''
+The main training code
+'''
 """
 import os
 import time
@@ -39,6 +42,8 @@ class SingleFNet(object):
         else:
             self.net = net
 
+
+        # these 3 metrics can output three value
         self.metrics = {
                 "sampson_dist      " : sampson_dist,
                 "sym_epilolar_dist " : sym_epilolar_dist,
@@ -122,6 +127,7 @@ class SingleFNet(object):
             val_data_loader = self.val_data_loader
 
         val_loss = 0
+        # generate 3 diction with same keys in metrics @Eason
         relative =  { k:0 for k in self.metrics.keys() }
         scores   =  { k:0 for k in self.metrics.keys() }
         base     =  { k:0 for k in self.metrics.keys() }
@@ -142,7 +148,10 @@ class SingleFNet(object):
             #metrics is a dictionary
             for k in self.metrics.keys():
                 m = self.metrics[k]
+                # fmat is the networks output, f_pred;
+                # by is the f_gt
                 r_score, m_score, base_score = m(fmat, by, bp1, bp2)
+                # the final output when testing are 3 items below @Eason
                 scores[k] += m_score.mean()
                 relative[k] += r_score.mean()
                 base[k] += base_score.mean()
@@ -155,7 +164,7 @@ class SingleFNet(object):
             output_data[k] = {}
         ind = 0
         for k in scores.keys():
-            s = scores[k]
+            s = scores[k] # 
             v = base[k]
             r = relative[k]
             print("\t%s\t%.5f %.5f %.5f"\
@@ -202,7 +211,7 @@ class SingleFNet(object):
             test_loss += loss
             for k in self.metrics.keys():
                 m = self.metrics[k]
-                r_score, m_score, base_score = m(fmat, by, bp1, bp2)
+                r_score, m_score, base_score = m(fmat, by, bp1, bp2)  # by is the F_GT got from calib_cam_to_cam.txt
                 scores[k] += m_score.mean()
                 relative[k] += r_score.mean()
                 base[k] += base_score.mean()

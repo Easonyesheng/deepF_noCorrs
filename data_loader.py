@@ -56,7 +56,7 @@ def make_data_loader(norm='norm'):
     tr_X = np.load(os.path.join(path_dir, 'tr_X.npy'))
     # tr_Y = np.load(os.path.join(path_dir, 'tr_Y.npy'))
     # tr_Y = np.load(os.path.join('saved_npy/norm', 'tr_Y_N.npy'))
-    tr_Y = np.load(os.path.join(path_dir, 'tr_Y_NN.npy'))
+    tr_Y = np.load(os.path.join(path_dir, 'tr_Y_NN.npy')) # NN : norm normalization
     tr_P1 = np.load(os.path.join(path_dir, 'tr_P1.npy'))
     tr_P2 = np.load(os.path.join(path_dir, 'tr_P2.npy'))
 

@@ -1,5 +1,11 @@
 """
 This file contains the codes for preprocessing.
+'''
+Use this code to generate taining data
+
+@Eason
+
+'''
 """
 import sys
 import os
@@ -44,6 +50,7 @@ def bind_model(feature):
     nsml.bind(save=save, load=load)
 '''
 
+# this funtion to split and combine data
 def data_spliter(data_lst, tr_ratio = 0.8, shuffle = True):
     """
     Takes all the possible data X, Y, return a data split of
@@ -66,6 +73,14 @@ def data_spliter(data_lst, tr_ratio = 0.8, shuffle = True):
     te_lst  = [elt[trN+vtN:,...] for elt in data_lst]
     return tr_lst, val_lst, te_lst
 
+
+# img preproseccing 
+'''
+Some strange things:
+We download the rectified imgs
+And we calculate the Fundamental Matrix before the images are rectified
+So use this preprocess to change images to the size when they were unrectified
+'''
 def img_prep(img_path, target_size = (256, 256)):
     img = cv2.imread(img_path, 0)
     # print ('img before reshping: ', img.shape, 'target size: ', target_size)
@@ -248,7 +263,7 @@ def make_mvs_data_loader(size=(128,128), norm="norm"):
     X /= 255. # Normalize to [0,1]
     return (lambda : data_spliter([X,Y,P1,P2]))
 
-
+# 
 def make_kitti_data_loader(size=(128,128), norm="norm"):
     # print ('dataset:',DATASET_PATH)
     path_dir = os.listdir(PATH_CAM)
@@ -293,7 +308,7 @@ def make_kitti_data_loader(size=(128,128), norm="norm"):
         N += len(filenames)
     
     W, H = size
-    W, H = 1392, 512
+    W, H = 1392, 512 # size before rectification @Eason
     
     # N = len(filenames)
     N = 2000
@@ -325,7 +340,7 @@ def make_kitti_data_loader(size=(128,128), norm="norm"):
                 continue
 
             print ('pre-processing image: ', left_path, 'i: ', i)
-            F, pts1, pts2 = get_FMat(left_path, right_path)
+            F, pts1, pts2 = get_FMat(left_path, right_path) # without method input means get the F_GT from camera parameters
 
 
             if F is None or pts1 is None or pts2 is None:

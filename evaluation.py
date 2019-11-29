@@ -1,3 +1,13 @@
+"""
+evaluation metrics
+
+'''
+4 kinds of metrics
+
+'''
+
+
+"""
 import numpy as np
 from povray import stereo_pair
 
@@ -6,8 +16,8 @@ class KPCorrBasedMetric(object):
     def __init__(self, metric, normalize=False, epsilon=1e-5):
         self.metric = metric
         self.normalize = normalize
-        self.epsilon = epsilon
-
+        self.epsilon = epsilon # a very small thing @Eason
+    # f_predicted F_GroundTruth
     def __call__(self, f_pred, f_gtr, pts1, pts2):
         scores = []
         scores_pred = []
