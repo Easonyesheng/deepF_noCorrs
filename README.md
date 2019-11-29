@@ -27,3 +27,9 @@ Try to use Deep Learning to obtain fundamental matrices.
 # for training the model:
 	run the file single_fnet.py
 	the arguments to be specified are mentioned in the same file.
+	The directionary structure:
+	--deepF_noCorrs
+		--code
+			--all code thing & mkdir data here
+		--data(the same data dir as in code)
+		--saved_npy
