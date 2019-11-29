@@ -139,6 +139,7 @@ class SingleFNet(object):
             feed_dict = {self.x1 : img1, self.x2 : img2, self.y : by}
             loss, fmat = self.sess.run([self.val_loss, self.val_y_], feed_dict)
             val_loss += loss
+            #metrics is a dictionary
             for k in self.metrics.keys():
                 m = self.metrics[k]
                 r_score, m_score, base_score = m(fmat, by, bp1, bp2)

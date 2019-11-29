@@ -6,10 +6,11 @@ Data Loaders all return a tuple (img1_batch, img2_batch, f_matrix batch)
 import os
 import data_util
 import numpy as np
-import nsml
-from nsml import DATASET_PATH
+# import nsml
+# from nsml import DATASET_PATH
 # CFD = os.path.dirname(os.path.realpath(__file__))
 
+DATASET_PATH = '../saved_npy'
 class DataSet(object):
     """TODO"""
     def __init__(self, X, Y, P1, P2, shuffle=True):
@@ -49,23 +50,27 @@ class DataSet(object):
         return self.N
 
 def make_data_loader(norm='norm'):
-    path_dir = os.path.join(DATASET_PATH, 'train', norm)
+    # path_dir = os.path.join(DATASET_PATH, 'train', norm)
+    path_dir = os.path.join(DATASET_PATH,'norm')
 
     tr_X = np.load(os.path.join(path_dir, 'tr_X.npy'))
     # tr_Y = np.load(os.path.join(path_dir, 'tr_Y.npy'))
-    tr_Y = np.load(os.path.join('saved_npy/norm', 'tr_Y_N.npy'))
+    # tr_Y = np.load(os.path.join('saved_npy/norm', 'tr_Y_N.npy'))
+    tr_Y = np.load(os.path.join(path_dir, 'tr_Y_NN.npy'))
     tr_P1 = np.load(os.path.join(path_dir, 'tr_P1.npy'))
     tr_P2 = np.load(os.path.join(path_dir, 'tr_P2.npy'))
 
     val_X = np.load(os.path.join(path_dir, 'val_X.npy'))
     # val_Y = np.load(os.path.join(path_dir, 'val_Y.npy'))
-    val_Y = np.load(os.path.join('saved_npy/norm', 'val_Y_N.npy'))
+    # val_Y = np.load(os.path.join('saved_npy/norm', 'val_Y_N.npy'))
+    val_Y = np.load(os.path.join(path_dir, 'val_Y_NN.npy'))
     val_P1 = np.load(os.path.join(path_dir, 'val_P1.npy'))
     val_P2 = np.load(os.path.join(path_dir, 'val_P2.npy'))
 
     te_X = np.load(os.path.join(path_dir, 'te_X.npy'))
     # te_Y = np.load(os.path.join(path_dir, 'te_Y.npy'))
-    te_Y = np.load(os.path.join('saved_npy/norm', 'te_Y_N.npy'))
+    # te_Y = np.load(os.path.join('saved_npy/norm', 'te_Y_N.npy'))
+    te_Y = np.load(os.path.join(path_dir, 'te_Y_NN.npy'))
     te_P1 = np.load(os.path.join(path_dir, 'te_P1.npy'))
     te_P2 = np.load(os.path.join(path_dir, 'te_P2.npy'))
     
