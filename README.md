@@ -47,6 +47,6 @@ saved to ../saved_npy/ as .npy file.
 A dictionary named metrics in single_fnet.py, whose items are functions used to evaluate F matrix.  
 use a class named KPCorrBasedMetric() in evaluation.py to pack these functions make their output 3 values as they output 1 value before. 
 the evaluation functions are in ./povary/stereo_pairs.py.  
-the final outputs when test or evaluation are:
-	1.|score of predicted - score of F_GT| 2.score of predicted F 3.score of F_GT  
+the final outputs when test or evaluation are:  
+	'|score of predicted - score of F_GT|'  &  'score of predicted F'  &   'score of F_GT'  
 	
