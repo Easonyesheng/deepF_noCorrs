@@ -38,14 +38,15 @@ Try to use Deep Learning to obtain fundamental matrices.
 How does this single_fnet.py work?  
 Get data --> training & testing & evaluating --> save  
 ## Data    
-	data_util.py  
-	  use make_kitti_data_loader() to input left & right images   
-	  use get_FMat() in kitti_fmat.py to get the F_GT.  
-	  use data_spliter() to devide data to training & testing & evaluation.  
-	  save to ../saved_npy/ as .npy file.  
+data_util.py  
+use make_kitti_data_loader() to input left & right images   
+use get_FMat() in kitti_fmat.py to get the F_GT.  
+use data_spliter() to devide data to training & testing & evaluation.  
+saved to ../saved_npy/ as .npy file.  
 ## Test
-	A dictionary named metrics in single_fnet.py, whose items are functions used to evaluate F matrix.  
-	use a class named KPCorrBasedMetric() in evaluation.py to pack these functions make their output 3 values as they output 1 value before.  
-	the evaluation functions are in ./povary/stereo_pairs.py.  
-	the final outputs when test or evaluation are 1.|score of predicted - score of F_GT| 2.score of predicted F 3.score of F_GT  
+A dictionary named metrics in single_fnet.py, whose items are functions used to evaluate F matrix.  
+use a class named KPCorrBasedMetric() in evaluation.py to pack these functions make their output 3 values as they output 1 value before. 
+the evaluation functions are in ./povary/stereo_pairs.py.  
+the final outputs when test or evaluation are:
+	1.|score of predicted - score of F_GT| 2.score of predicted F 3.score of F_GT  
 	
