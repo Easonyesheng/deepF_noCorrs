@@ -5,7 +5,7 @@ Note: [0,0,0] is Black, [255, 255, 255] is white.
 
 
 '''
-This code includes the 
+This code includes the metrics calculation
 '''
 """
 import os
@@ -292,7 +292,7 @@ def lin_recon_err(F, pts1, pts2):
 
     return err / float(len(pts1))
 
-
+# dist = [(a_q*x_p+b_q*y_p+c_q)^2/(a_q^2 + b_q^2) + (a_p*x_q+b_p*y_q+c_p)^2/(a_p^2 + b_p^2)] @Eason
 def sym_epipolar_dist(F, pts1, pts2, epsilon=1e-5):
     assert len(pts1) == len(pts2)
     err = 0.

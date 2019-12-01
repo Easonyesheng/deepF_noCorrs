@@ -307,7 +307,9 @@ class SingleFNet(object):
                 if epo % 50 == 0:
                     print("Saving the model...")
                     save_path = "log/single_fnet_%s" %self.prefix
-                    # self.tr_saver.save(self.sess, os.path.join(save_path, "model-%d.ckpt"%epo))
+                    #save the model
+                    self.tr_saver.save(self.sess, os.path.join(save_path, "model-%d.ckpt"%epo))
+                    
                     print("Model saved to %s"%save_path)
 		
 
