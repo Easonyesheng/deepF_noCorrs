@@ -16,7 +16,7 @@ from evaluation import sampson_dist, sym_epilolar_dist, epipolar_constraint,epip
 class SingleFNet(object):
 
     def __init__(self, tr_data_loader, val_data_loader, test_data_loader=None, net=None,
-                 lr=0.001, l1_weight=0., l2_weight=2., batch_size=128,
+                 lr=0.001, l1_weight=0., l2_weight=2.,ep_weight=0.001 , batch_size=128,
                  gradient_clipping=False, prefix="test", use_internal_layer=False,
                  use_coor=False, use_idx=False, norm_method='norm', resume=None):
         self.resume = resume
@@ -25,6 +25,7 @@ class SingleFNet(object):
         self.test_data_loader = test_data_loader
         self.l1_weight = l1_weight
         self.l2_weight = l2_weight
+        self.ep_weight = ep_weight
         self.batch_size = batch_size
         self.prefix = prefix
         self.lr = lr
@@ -43,7 +44,7 @@ class SingleFNet(object):
             self.net = net
 
 
-        # these 3 metrics can output three value
+        # these 4 metrics can output 4 value
         self.metrics = {
                 "sampson_dist      " : sampson_dist,
                 "sym_epilolar_dist " : sym_epilolar_dist,
@@ -75,7 +76,7 @@ class SingleFNet(object):
                      [None] + list(self.tr_data_loader.fmat_shape())))
 
             print("Building training graph...")
-            self.y_, self.loss, self.l1_loss, self.l2_loss = \
+            self.y_, self.loss, self.l1_loss, self.l2_loss, self.ep_loss = \
                     self.build_graph(self.tr_data_loader, is_training=True, is_reuse=False)
 
             # Optimizers.
@@ -92,21 +93,22 @@ class SingleFNet(object):
 
             # Validation
             print("Building validation graph...")
-            self.val_y_, self.val_l1_loss, self.val_l2_loss, self.val_loss= \
+            self.val_y_, self.val_l1_loss, self.val_l2_loss, self.val_loss, self.val_ep_loss= \
                     self.build_graph(self.val_data_loader, is_training=False, is_reuse=True)
 
             # Testing
             print("Building testing graph...")
-            self.test_y_, self.test_l1_loss, self.test_l2_loss, self.test_loss= \
+            self.test_y_, self.test_l1_loss, self.test_l2_loss, self.test_loss, self.test_ep_loss= \
                     self.build_graph(self.test_data_loader, is_training=False, is_reuse=True)
 
             # Summary
             tf.summary.scalar("l1_loss", self.l1_loss)
             tf.summary.scalar("l2_loss", self.l2_loss)
             tf.summary.scalar("loss",    self.loss)
+            tf.summary.scalar("ep_loss", self.ep_loss)
 
             self.tr_summary = tf.summary.merge_all()
-            self.tr_log_writer = tf.summary.FileWriter("log/single_fnet_%s" %self.prefix, \
+            self.tr_log_writer = tf.summary.FileWriter("log/%s" %self.prefix, \
                                                        self.sess.graph, flush_secs=30)
             self.tr_saver = tf.train.Saver()
 
@@ -114,13 +116,45 @@ class SingleFNet(object):
     def build_graph(self, data_loader, is_training=True, is_reuse=False):
         # Network.
         y_ = self.net(self.x1, self.x2, self.img_shape, is_training, reuse=is_reuse)
-
+        # print("pre shape:",y_.shape)
+        # print("y shape:",self.y.shape)
+        # x
         # Loss
         l1_loss = tf.reduce_mean(tf.abs(self.y - y_)) * self.l1_weight
         l2_loss = tf.losses.mean_squared_error(self.y, y_) * self.l2_weight
-        loss = l1_loss + l2_loss
 
-        return y_, loss, l1_loss, l2_loss
+        '''
+        add the loss of epi_constraint_abs
+        '''
+        bx, by, bp1, bp2 = self.tr_data_loader(self.batch_size)
+        # a, e_c_loss, b = epipolar_constraint_abs(y_, by, bp1 ,bp2)
+        # r_score, m_score, base_score = m(fmat, by, bp1, bp2)
+        err = 0.0
+        e_c_loss = 0.0
+        count = 0.0
+        bp1 = bp1.reshape([-1,2])
+        bp2 = bp2.reshape([-1,2])
+        # print(bp1)
+        for i in range(self.batch_size):
+            for p1, p2 in zip(bp1, bp2):
+                # print(p1.shape)
+                p1 = p1.reshape([2,1])
+                p2 = p2.reshape([2,1])
+                # hp1 = tf.Variable(tf.ones([3,1]), name="hp1")  
+                # hp2 = tf.Variable(tf.ones([3,1]), name="hp2")  
+                hp1, hp2 = np.ones([3,1],dtype=np.float32), np.ones([3,1],dtype=np.float32)
+                hp1[:2], hp2[:2] = p1, p2
+                y_re = tf.reshape(y_, [self.batch_size,3,3])
+                err += tf.abs(tf.matmul(hp2.T, tf.matmul(y_re[i,:,:], hp1)))
+                count+=1
+            e_c_loss += err
+        count = self.batch_size*count 
+        e_c_loss = (e_c_loss[0,0]/count)*self.ep_weight
+        loss = l1_loss + l2_loss + e_c_loss
+        # only use ep_loss
+        # loss = e_c_loss
+
+        return y_, loss, l1_loss, l2_loss, e_c_loss
 
     def validate(self, iters, best_score, val_data_loader=None):
         if val_data_loader == None:
@@ -279,10 +313,10 @@ class SingleFNet(object):
                     img2 = np.expand_dims(img2, axis=3)
                     feed_dict = {self.x1 : img1, self.x2 : img2, self.y : by}
                     if i % log_interval == 0:
-                        summary, loss = self.sess.run([
-                            self.tr_summary, self.loss], feed_dict)
-                        print("[epo=%02d/%02d][%05d/%05d] loss = %.5f"\
-                              %(epo, epoches, i, num_batches, loss))
+                        summary, loss, l1_loss, l2_loss, ep_loss = self.sess.run([
+                            self.tr_summary, self.loss, self.l1_loss, self.l2_loss ,self.ep_loss], feed_dict)
+                        print("[epo=%02d/%02d][%05d/%05d] loss = %.5f l1_loss = %.5f l2_loss = %.5f ep_loss = %.5f"\
+                              %(epo, epoches, i, num_batches, loss, l1_loss, l2_loss, ep_loss))
                         self.tr_log_writer.add_summary(summary, ttl_iter)
                     self.sess.run(self.train_op, feed_dict)
 
@@ -304,9 +338,9 @@ class SingleFNet(object):
                     ind += 1
 		
 		
-                if epo % 50 == 0:
+                if epo % 10 == 0:
                     print("Saving the model...")
-                    save_path = "log/single_fnet_%s" %self.prefix
+                    save_path = "log\%s" %self.prefix # \ for windows and / for linux & Mac
                     #save the model
                     self.tr_saver.save(self.sess, os.path.join(save_path, "model-%d.ckpt"%epo))
                     
@@ -321,14 +355,16 @@ if __name__ == "__main__":
                         help="Prefix for naming the log/model.")
     parser.add_argument('--batch-size', default=4, type=int,
                         help="Batch size.")
-    parser.add_argument('--epoches', default=60000, type=int,
+    parser.add_argument('--epoches', default=100, type=int,
                         help="Number of epoches.")
-    parser.add_argument('--data-size', default=30000, type=int,
-                        help="Dataset size as number of (img1, img2, fmat) tuple")
-    parser.add_argument('--l1-weight', default=10., type=float,
+    parser.add_argument('--data-size', default=2000, type=int,
+                        help="Dataset size as number of (img1, img2, fmat) tuple") # default = 30000
+    parser.add_argument('--l1-weight', default=1., type=float,
                         help="Weight for L1-loss")
     parser.add_argument('--l2-weight', default=1., type=float,
                         help='Weight for L2-loss')
+    parser.add_argument('--ep-weight', default=1, type=float,
+                        help='Weight for ep-loss')
     parser.add_argument('--lr', default=0.001, type=float,
                         help='Learning rate')
     parser.add_argument('--use-gc', default=True, type=bool,
@@ -374,9 +410,15 @@ if __name__ == "__main__":
 
     model = SingleFNet(tr_ds, val_ds, te_ds, net=None, lr=args.lr,
                        l1_weight=args.l1_weight, l2_weight=args.l2_weight,
+                       ep_weight=args.ep_weight,
                        batch_size=args.batch_size, gradient_clipping=args.use_gc,
                        resume=args.resume, norm_method=args.norm_method,
                        use_coor=args.use_coor, use_idx=args.use_pos_index,
                        use_internal_layer=args.use_reconstruction,
                        prefix="%s_time%d"%(args.prefix, int(time.time())))
     model.train(epoches=args.epoches)
+
+'''
+for UCN model:
+python .\single_fnet.py --prefix real_all --batch-size 2 --epoches 1000 --use-coor True --use-pos-index True --use-reconstruction True --lr 0.00001
+'''
