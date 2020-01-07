@@ -27,26 +27,3 @@ Try to use Deep Learning to obtain fundamental matrices.
 # for training the model:
 	run the file single_fnet.py
 	the arguments to be specified are mentioned in the same file.
-	The directionary structure:
-	--deepF_noCorrs
-		--code
-			--all code thing & mkdir data here
-		--data(the same data dir as in code)
-		--saved_npy
-		
-# Code Parser  
-How does this single_fnet.py work?  
-Get data --> training & testing & evaluating --> save  
-## Data    
-data_util.py  
-use make_kitti_data_loader() to input left & right images   
-use get_FMat() in kitti_fmat.py to get the F_GT.  
-use data_spliter() to devide data to training & testing & evaluation.  
-saved to ../saved_npy/ as .npy file.  
-## Test
-A dictionary named metrics in single_fnet.py, whose items are functions used to evaluate F matrix.  
-use a class named KPCorrBasedMetric() in evaluation.py to pack these functions make their output 3 values as they output 1 value before. 
-the evaluation functions are in ./povary/stereo_pairs.py.  
-the final outputs when test or evaluation are:  
-	'|score of predicted - score of F_GT|'  &  'score of predicted F'  &   'score of F_GT'  
-	

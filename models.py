@@ -57,6 +57,10 @@ class HomographyNet(object):
               %(orig_idx.get_shape(), new_idx.get_shape(), out.get_shape()))
         return out
 
+
+    '''
+    返回平滑过的F
+    '''
     def reconstruction_module(self, x):
         print("Use structural output layer")
         def get_rotation(rx, ry, rz):
@@ -112,13 +116,15 @@ class HomographyNet(object):
 
             # to get the last row as linear combination of first two rows
             # new_F = get_linear_comb(x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7])
-            # new_F = get_linear_comb(flat[0], flat[1], flat[2], flat[3], flat[4], flat[5], x[6], x[7])
+            # # new_F = get_linear_comb(flat[0], flat[1], flat[2], flat[3], flat[4], flat[5], x[6], x[7])
             # flat = tf.reshape(new_F, [-1])
             print ("Using reconstruction layer")
             return flat
 
         print("Using structural F-matrix output")
-        out = tf.map_fn(get_fmat, x)
+        # x是get_fmat的输入，但可能x的维度比输入高一维，map_fn将x按高出的维度map展开应用于get_fmat
+        out = tf.map_fn(get_fmat, x) # High level function -- use function as input
+
 
         return out
 
@@ -130,15 +136,15 @@ class HomographyNet(object):
             print(x1.get_shape())
             print(tf.size(x1))
             
-            '''
+            
             # UCN model, uncomment this part for UCN model
             ucn = UniversalCorrepondenceNetwork(x1, x2, img_shape)
             feature1, feature2 = ucn(x1,x2, img_shape)
             x = tf.concat([feature1, feature2], axis=3)
             print ('feature vector: ', x.shape)
-            '''
+            
             # single model
-            x = tf.concat([x1, x2], axis=3)
+            # x = tf.concat([x1, x2], axis=3)
             
             # uncomment this portion to use the single stream regressor network
             def get_grid(_):
@@ -270,7 +276,7 @@ class HomographyNet(object):
                 dense1 = tf.layers.dropout(dense1, rate=0.5)
             out = tf.layers.dense(dense1, self.out_dim)
 
-            if self.use_reconstruction_module:
+            if self.use_reconstruction_module:  
                 out = self.reconstruction_module(out)
 
             out = self.normalize_output(out)

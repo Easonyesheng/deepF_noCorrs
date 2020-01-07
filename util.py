@@ -5,7 +5,7 @@ import random
 import numpy as np
 from povray.stereo_pair import gen_fmat, err_pts_correspond, \
                                find_key_point_pairs, make_cali_img_pairs
-from kittiFMat.parser import KittiParamParser
+from kittiFMat.kt_parser import KittiParamParser
 # from matplotlib import pyplot as plt
 
 # CFD = os.path.dirname(os.path.realpath(__file__))

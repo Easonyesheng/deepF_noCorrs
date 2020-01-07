@@ -1,10 +1,14 @@
 """
 This file contains the codes for preprocessing.
 '''
-Use this code to generate taining data
+# Use this code to generate training data
 
+# @Eason
+
+Now It's used to generate prediction data
 @Eason
 
+to generate training data
 '''
 """
 import sys
@@ -27,7 +31,8 @@ from kittiFMat.kitti_fmat import get_FMat
 # PATH_CAM = DATASET_PATH+'/train/kitti/2011_09_26/'
 # PATH_CAM = '../data_kitti/kitti/2011_09_26/'
 # PATH_CAM = './data/kitti/2011_09_26_drive_0001_sync/'
-PATH_CAM = './data/kitti/2011_09_26/'
+PATH_CAM = '../data/kitti/2011_09_26/' # Train
+# PATH_CAM = '../data/Pred/'
 # PATH_CAM_LEFT = 'data/kitti/2011_09_26/2011_09_26_drive_0001_sync/image_00/data/'
 # PATH_CAM_RIGHT = 'data/kitti/2011_09_26/2011_09_26_drive_0001_sync/image_01/data/'
 
@@ -263,7 +268,8 @@ def make_mvs_data_loader(size=(128,128), norm="norm"):
     X /= 255. # Normalize to [0,1]
     return (lambda : data_spliter([X,Y,P1,P2]))
 
-# 
+# Changed for generate pred date
+# Uncomment ## part for generating training data
 def make_kitti_data_loader(size=(128,128), norm="norm"):
     # print ('dataset:',DATASET_PATH)
     path_dir = os.listdir(PATH_CAM)
@@ -296,14 +302,14 @@ def make_kitti_data_loader(size=(128,128), norm="norm"):
 
             ct += 1
     '''
-    
+
     N = 0
-    # print ('path_dir: ', path_dir)
+    print ('path_dir: ', path_dir)
     for path in path_dir:
         path_new = os.path.join(PATH_CAM, path, 'image_00/data/')
         if not os.path.isdir(path_new):
             continue
-        # print ('path new: ', path_new)
+        print ('path new: ', path_new)
         filenames = os.listdir(path_new)
         N += len(filenames)
     
@@ -311,6 +317,7 @@ def make_kitti_data_loader(size=(128,128), norm="norm"):
     W, H = 1392, 512 # size before rectification @Eason
     
     # N = len(filenames)
+    print("How many imgs:",N)
     N = 2000
     print ('N: ', N)
     X = np.zeros((N, H, W, 2)) # H, W interchanged here since numpy takes H,W as input 
@@ -344,7 +351,7 @@ def make_kitti_data_loader(size=(128,128), norm="norm"):
 
 
             if F is None or pts1 is None or pts2 is None:
-                continue
+               continue
 
             left_img  = img_prep(left_path, target_size=(W,H))
             right_img = img_prep(right_path, target_size=(W,H))
@@ -368,11 +375,12 @@ def make_kitti_data_loader(size=(128,128), norm="norm"):
 
         if i >= N:
                 break
-
+    # X = X.astype(np.float32)
     X, Y = X.astype(np.float32), Y.astype(np.float32)
     tot_len = len(P1_lst)
+    # cut the data by the length of matching points list's length ?
     X, Y = X[:tot_len, :], Y[:tot_len, :]
-    
+    # 
     
     # changed here
     # Normalize F-matrices
@@ -391,12 +399,13 @@ def make_kitti_data_loader(size=(128,128), norm="norm"):
     P1_lst = [x[:kpts_cnt,:].reshape((1,kpts_cnt,2)) for x in P1_lst]
     P2_lst = [x[:kpts_cnt,:].reshape((1,kpts_cnt,2)) for x in P2_lst]
     P1, P2 = np.concatenate(P1_lst, axis=0), np.concatenate(P2_lst, axis=0)
-    # print(X.shape)
-    # print(Y.shape)
-    # print(P1.shape)
-    # print(P2.shape)
+    print(X.shape)
+    print(Y.shape)
+    print(P1.shape)
+    print(P2.shape)
 
     X /= 255. # Normalize to [0,1]
+    # return X
     return (lambda : data_spliter([X,Y,P1,P2]))
 
 '''
@@ -535,27 +544,30 @@ if __name__ == '__main__':
     Path(base_path).mkdir(exist_ok=True, parents=True)
 
     data_loader = make_kitti_data_loader(norm=norm)
-    tr_lst, val_lst, te_lst = data_loader()
+    tr_lst, val_lst,  te_lst = data_loader()
 
     print ('train: ', tr_lst[0].shape, tr_lst[1].shape, tr_lst[2].shape, tr_lst[3].shape)
     print ('val: ', val_lst[0].shape, val_lst[1].shape, val_lst[2].shape, val_lst[3].shape)
     print ('test: ', te_lst[0].shape, te_lst[1].shape, te_lst[2].shape, te_lst[3].shape)
+    # print ('Pred: ', te_lst.shape)
     
-    
-    np.save('../saved_npy/'+norm+'/tr_X.npy',tr_lst[0])
-    np.save('../saved_npy/'+norm+'/tr_Y_NN.npy',tr_lst[1])
-    np.save('../saved_npy/'+norm+'/tr_P1.npy',tr_lst[2])
-    np.save('../saved_npy/'+norm+'/tr_P2.npy',tr_lst[3])
+    np.save('../saved_npy_new/'+norm+'/tr_X.npy',tr_lst[0])
+    np.save('../saved_npy_new/'+norm+'/tr_Y_NN.npy',tr_lst[1])
+    np.save('../saved_npy_new/'+norm+'/tr_P1.npy',tr_lst[2])
+    np.save('../saved_npy_new/'+norm+'/tr_P2.npy',tr_lst[3])
 
-    np.save('../saved_npy/'+norm+'/val_X.npy',val_lst[0])
-    np.save('../saved_npy/'+norm+'/val_Y_NN.npy',val_lst[1])
-    np.save('../saved_npy/'+norm+'/val_P1.npy',val_lst[2])
-    np.save('../saved_npy/'+norm+'/val_P2.npy',val_lst[3])
+    np.save('../saved_npy_new/'+norm+'/val_X.npy',val_lst[0])
+    np.save('../saved_npy_new/'+norm+'/val_Y_NN.npy',val_lst[1])
+    np.save('../saved_npy_new/'+norm+'/val_P1.npy',val_lst[2])
+    np.save('../saved_npy_new/'+norm+'/val_P2.npy',val_lst[3])
 
-    np.save('../saved_npy/'+norm+'/te_X.npy',te_lst[0])
-    np.save('../saved_npy/'+norm+'/te_Y_NN.npy',te_lst[1])
-    np.save('../saved_npy/'+norm+'/te_P1.npy',te_lst[2])
-    np.save('../saved_npy/'+norm+'/te_P2.npy',te_lst[3])
+    np.save('../saved_npy_new/'+norm+'/te_X.npy',te_lst[0])
+    np.save('../saved_npy_new/'+norm+'/te_Y_NN.npy',te_lst[1])
+    np.save('../saved_npy_new/'+norm+'/te_P1.npy',te_lst[2])
+    np.save('../saved_npy_new/'+norm+'/te_P2.npy',te_lst[3])
+
+
+    # np.save('../pred_npy/'+norm+'/Pre_X.npy',te_lst)
     
     # tr_lst = np.load('../saved_npy/norm/tr.npz')
     # val_lst = np.load('../saved_npy/norm/val.npz')
