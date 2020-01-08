@@ -74,6 +74,9 @@ class SingleFNet(object):
             #          [None] + list(self.tr_data_loader.img_shape())))
             self.y = tf.placeholder(tf.float32, shape=(
                      [None] + list(self.tr_data_loader.fmat_shape())))
+        
+            self.bp1 = tf.placeholder(tf.float32, shape=([4,54,2]), name='bp1')
+            self.bp2 = tf.placeholder(tf.float32, shape=([4,54,2]), name='bp2')
 
             print("Building training graph...")
             self.y_, self.loss, self.l1_loss, self.l2_loss, self.ep_loss = \
@@ -126,35 +129,89 @@ class SingleFNet(object):
         '''
         add the loss of epi_constraint_abs
         '''
-        bx, by, bp1, bp2 = self.tr_data_loader(self.batch_size)
-        # a, e_c_loss, b = epipolar_constraint_abs(y_, by, bp1 ,bp2)
-        # r_score, m_score, base_score = m(fmat, by, bp1, bp2)
-        err = 0.0
-        e_c_loss = 0.0
-        count = 0.0
-        bp1 = bp1.reshape([-1,2])
-        bp2 = bp2.reshape([-1,2])
-        # print(bp1)
+        # bx, by, bp1, bp2 = self.tr_data_loader(self.batch_size)
+        # # a, e_c_loss, b = epipolar_constraint_abs(y_, by, bp1 ,bp2)
+        # # r_score, m_score, base_score = m(fmat, by, bp1, bp2)
+        # err = 0.0
+        # e_c_loss = 0.0
+        # count = 0.0
+        # bp1 = bp1.reshape([-1,2])
+        # bp2 = bp2.reshape([-1,2])
+        # # print(bp1)
+        # for i in range(self.batch_size):
+        #     for p1, p2 in zip(bp1, bp2):
+        #         # print(p1.shape)
+        #         p1 = p1.reshape([2,1])
+        #         p2 = p2.reshape([2,1])
+        #         # hp1 = tf.Variable(tf.ones([3,1]), name="hp1")  
+        #         # hp2 = tf.Variable(tf.ones([3,1]), name="hp2")  
+        #         hp1, hp2 = np.ones([3,1],dtype=np.float32), np.ones([3,1],dtype=np.float32)
+        #         hp1[:2], hp2[:2] = p1, p2
+        #         y_re = tf.reshape(y_, [self.batch_size,3,3])
+        #         err += tf.abs(tf.matmul(hp2.T, tf.matmul(y_re[i,:,:], hp1)))
+        #         count+=1
+        #     e_c_loss += err
+        # count = self.batch_size*count 
+        # e_c_loss = (e_c_loss[0,0]/count)*self.ep_weight
+        '''
+        add loss of sym_epipolar_dist
+        '''
+        # bx, by, bp1, bp2 = self.tr_data_loader(self.batch_size)
+        pts1 = self.bp1
+        pts2 = self.bp2
+        # pts1 = bp1.reshape([-1,2])
+        # pts2 = bp2.reshape([-1,2])
+        print(pts1.shape)
+        err = 0.
+        e_d_loss = 0.
+        count = 0
+        epsilon = 1e-5
+        # door = tf.constant([[0.15]], dtype=tf.float32)
+        a = tf.constant([[1]], dtype=tf.float32)
+        #(len(pts2)/4)
         for i in range(self.batch_size):
-            for p1, p2 in zip(bp1, bp2):
-                # print(p1.shape)
-                p1 = p1.reshape([2,1])
-                p2 = p2.reshape([2,1])
-                # hp1 = tf.Variable(tf.ones([3,1]), name="hp1")  
-                # hp2 = tf.Variable(tf.ones([3,1]), name="hp2")  
-                hp1, hp2 = np.ones([3,1],dtype=np.float32), np.ones([3,1],dtype=np.float32)
-                hp1[:2], hp2[:2] = p1, p2
+            for j in range(54):
+                door = tf.constant(0.15, dtype=tf.float32)
+                p1 = pts1[i,j,:]
+                p2 = pts2[i,j,:]
+                p1 = tf.reshape(p1,[2,1])
+                p2 = tf.reshape(p2,[2,1])
+                p1 = tf.concat([p1,a],0)
+                p2 = tf.concat([p2,a],0)
+                # print('p1 shape:',p1.shape)
+                # p1 = tf.reshape(p1,[3,1])
+                # p2 = tf.reshape(p2,[3,1])
+                # print('type ',type(p1[0,0]))
+                # hp1, hp2 = np.ones([3,1],dtype=np.float32), np.ones([3,1],dtype=np.float32)
+                # hp1[:2,0], hp2[:2,0] = p1, p2
+                # hp1[0,0], hp2[0,0] = p1[0], p2[0]
+                # hp1[1,0], hp2[1,0] = p1[1], p2[1]
                 y_re = tf.reshape(y_, [self.batch_size,3,3])
-                err += tf.abs(tf.matmul(hp2.T, tf.matmul(y_re[i,:,:], hp1)))
-                count+=1
-            e_c_loss += err
-        count = self.batch_size*count 
-        e_c_loss = (e_c_loss[0,0]/count)*self.ep_weight
-        loss = l1_loss + l2_loss + e_c_loss
+
+                # use Gt to choose matching points
+                y_gt = tf.reshape(self.y, [self.batch_size,3,3])
+                err_gt = tf.abs(tf.matmul(tf.transpose(p2), tf.matmul(y_gt[i,:,:], p1)))
+                thre = err_gt[0,0]
+                # print(thre.shape)
+                # print(type(thre))
+                def f1(): return door-0.15
+                def f2(): return tf.add(door, 0.85)
+                result = tf.cond(thre > door, f1, f2)
+                # print(door)
+                fp, fq = tf.matmul(y_re[i,:,:], p1), tf.matmul(tf.transpose(y_re[i,:,:]),p2)
+                sym_jjt = 1./(fp[0]**2 + fp[1]**2 + epsilon) + 1./(fq[0]**2 + fq[1]**2 + epsilon)
+                err = err + ((tf.matmul(tf.transpose(p2), tf.matmul(y_re[i,:,:], p1))**2) * (sym_jjt + epsilon))*door
+                count+=1*door
+            e_d_loss += err
+            print("Use ",count," Points")
+        count *= self.batch_size
+        e_d_loss = (e_d_loss[0,0]/count)*self.ep_weight
+
+        loss = l1_loss + l2_loss + e_d_loss
         # only use ep_loss
         # loss = e_c_loss
 
-        return y_, loss, l1_loss, l2_loss, e_c_loss
+        return y_, loss, l1_loss, l2_loss, e_d_loss
 
     def validate(self, iters, best_score, val_data_loader=None):
         if val_data_loader == None:
@@ -176,7 +233,7 @@ class SingleFNet(object):
             img2 = bx[:,:,:,1]
             img1 = np.expand_dims(img1, axis=3)
             img2 = np.expand_dims(img2, axis=3)
-            feed_dict = {self.x1 : img1, self.x2 : img2, self.y : by}
+            feed_dict = {self.x1 : img1, self.x2 : img2, self.y : by, self.bp1 : bp1, self.bp2 : bp2}
             loss, fmat = self.sess.run([self.val_loss, self.val_y_], feed_dict)
             val_loss += loss
             #metrics is a dictionary
@@ -240,7 +297,7 @@ class SingleFNet(object):
             img2 = bx[:,:,:,1]
             img1 = np.expand_dims(img1, axis=3)
             img2 = np.expand_dims(img2, axis=3)
-            feed_dict = {self.x1 : img1, self.x2 : img2, self.y : by}
+            feed_dict = {self.x1 : img1, self.x2 : img2, self.y : by, self.bp1 : bp1, self.bp2 : bp2}
             loss, fmat = self.sess.run([self.test_loss, self.test_y_], feed_dict)
             test_loss += loss
             for k in self.metrics.keys():
@@ -306,12 +363,12 @@ class SingleFNet(object):
                 print("Training epoch : [%03d/%03d]"%(epo, epoches))
                 for i in range(num_batches):
                     ttl_iter += 1
-                    bx, by, _, _ = self.tr_data_loader(self.batch_size)
+                    bx, by, bp1, bp2 = self.tr_data_loader(self.batch_size)
                     img1 = bx[:,:,:,0]
                     img2 = bx[:,:,:,1]
                     img1 = np.expand_dims(img1, axis=3)
                     img2 = np.expand_dims(img2, axis=3)
-                    feed_dict = {self.x1 : img1, self.x2 : img2, self.y : by}
+                    feed_dict = {self.x1 : img1, self.x2 : img2, self.y : by, self.bp1 : bp1, self.bp2 : bp2}
                     if i % log_interval == 0:
                         summary, loss, l1_loss, l2_loss, ep_loss = self.sess.run([
                             self.tr_summary, self.loss, self.l1_loss, self.l2_loss ,self.ep_loss], feed_dict)
@@ -359,7 +416,7 @@ if __name__ == "__main__":
                         help="Number of epoches.")
     parser.add_argument('--data-size', default=2000, type=int,
                         help="Dataset size as number of (img1, img2, fmat) tuple") # default = 30000
-    parser.add_argument('--l1-weight', default=1., type=float,
+    parser.add_argument('--l1-weight', default=10., type=float,
                         help="Weight for L1-loss")
     parser.add_argument('--l2-weight', default=1., type=float,
                         help='Weight for L2-loss')
