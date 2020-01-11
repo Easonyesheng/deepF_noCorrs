@@ -1,10 +1,11 @@
 # DeepFMatrix
 Try to use Deep Learning to obtain fundamental matrices.
 
-**I have changed the author's code to get a better result.**  
+# **I have changed the author's code to get a better result.**  
 1) changed the loss.  
 2) get better matching points when generate data.  
 3) changed the ground truth by using rectified fundamental matrix.  
+copyright@Eason
 
 # References:
 
