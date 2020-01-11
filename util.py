@@ -88,18 +88,27 @@ def sift_get_fmat(img1, img2, total=100, ratio = 0.8, algo=cv2.FM_LMEDS,
     pts1 = []
     pts2 = []
 
-    # ratio test as per Lowe's paper
     for i,(m,n) in enumerate(matches):
-        if m.distance < ratio * n.distance:
-            good.append(m)
+            if m.distance < 0.8*n.distance:
+                good.append(m)
+                pts2.append(kp2[m.trainIdx].pt)
+                pts1.append(kp1[m.queryIdx].pt)
 
-    sorted_good_mat = sorted(good, key=lambda m: m.distance)
-    for m in sorted_good_mat:
-        pts2.append(kp2[m.trainIdx].pt)
-        pts1.append(kp1[m.queryIdx].pt)
+    pts1 = np.int32(pts1)
+    pts2 = np.int32(pts2)
 
-    pts1 = np.float32(pts1)
-    pts2 = np.float32(pts2)
+    # # ratio test as per Lowe's paper
+    # for i,(m,n) in enumerate(matches):
+    #     if m.distance < ratio * n.distance:
+    #         good.append(m)
+
+    # sorted_good_mat = sorted(good, key=lambda m: m.distance)
+    # for m in sorted_good_mat:
+    #     pts2.append(kp2[m.trainIdx].pt)
+    #     pts1.append(kp1[m.queryIdx].pt)
+
+    # pts1 = np.float32(pts1)
+    # pts2 = np.float32(pts2)
 
     # print ('pts size: ', pts1.size)
     assert pts1.size > 2 and pts2.size > 2
@@ -118,8 +127,9 @@ def sift_get_fmat(img1, img2, total=100, ratio = 0.8, algo=cv2.FM_LMEDS,
         pts1, pts2 = np.array([ p for p, _ in pts ]), \
                      np.array([ p for _, p in pts ])
     else:
-        pts1 = pts1[:min(len(pts1), total)]
-        pts2 = pts2[:min(len(pts1), total)]
+        # pts1 = pts1[:min(len(pts1), total)]
+        # pts2 = pts2[:min(len(pts1), total)]
+        pass
 
     if display:
         draw_matches(img1,pts1,img2,pts2)

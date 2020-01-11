@@ -10,7 +10,7 @@ import numpy as np
 input : Gray Image & lines & dots
 '''
 
-keywords = 'Single_epW-1'
+keywords = 'onesqrt_edw-5'
 
 def drawlines(imgl, imgr, lines, pts1, pts2 ):
     pts1 = pts1[20:60]

@@ -17,13 +17,6 @@ import os
 import cv2 
 
 
-imgpath = r'D:\F_Estimation\deepF_noCorrs\data\kitti\2011_09_26\2011_09_26_drive_0001_sync\\'
-
-# for RAW DATA all images have the same calib_flie
-calib_path = r'D:\F_Estimation\deepF_noCorrs\data\kitti\2011_09_26\calib_cam_to_cam.txt' 
-
-save_path = r'D:\F_Estimation\deepF_noCorrs\Code\Util\Kitti_ana\Result\\'
-
 
 class KittiAnalyse(object):
 
@@ -77,6 +70,7 @@ class KittiAnalyse(object):
             i+=1
         print('vessel shape:',X.shape)
         self.X = X
+        self.shape = [w,h]
         return X
     
     def Paser(self):
@@ -201,9 +195,10 @@ class KittiAnalyse(object):
         if len(pts1) > 40:
             pts1 = pts1[20:60]
             pts2 = pts2[20:60]
+        
         # imgl = img1.copy()
         # imgr = img2.copy()
-        r, c = imgl.shape
+        r, c, _ = imgl.shape
 
         i = 0
         for r, pt1, pt2 in zip(lines,pts1,pts2):
@@ -227,17 +222,23 @@ class KittiAnalyse(object):
         utility function
         '''
         i = img_index
-        img1 = np.zeros((self.X.shape[1],self.X.shape[2],1))
-        img2 = np.zeros((self.X.shape[1],self.X.shape[2],1))
+        img1 = np.zeros((self.X.shape[1],self.X.shape[2],3))
+        img2 = np.zeros((self.X.shape[1],self.X.shape[2],3))
         img1[:,:,0] = self.X[i,:,:,0]  #queryimage # left image
+        img1[:,:,1] = img1[:,:,0]
+        img1[:,:,2] = img1[:,:,1]
         img2[:,:,0] = self.X[i,:,:,1]  #trainimage # right image
+        img2[:,:,1] = img2[:,:,0]
+        img2[:,:,2] = img2[:,:,1]
         img1 = img1.astype(np.uint8)
         img2 = img2.astype(np.uint8)
         # print(img1.dtype)
         # cv2.imwrite(self.save_path+'OriimgL.jpg',img1)
         # cv2.imwrite(self.save_path+'OriimgR.jpg',img2)
-        # img1 = cv2.imread(self.save_path+'img1.jpg',0)
-        # img2 = cv2.imread(self.save_path+'img2.jpg',0)
+        # img1 = cv2.imread(self.save_path+'OriimgL.jpg',0)
+        # img2 = cv2.imread(self.save_path+'OriimgR.jpg')
+        # img1 = img1.astype(np.uint8)
+        # img2 = img2.astype(np.uint8)
 
         sift = cv2.xfeatures2d.SIFT_create()
 
@@ -266,6 +267,7 @@ class KittiAnalyse(object):
 
         self.match_pts1 = np.int32(pts1)
         self.match_pts2 = np.int32(pts2)
+        
         return  np.int32(pts1),  np.int32(pts2)
 
     def get_good_match(self,img_index):
@@ -299,26 +301,38 @@ class KittiAnalyse(object):
         '''
         draw the epipolar lines of the [img_index]th image pair
         save to save_path with save_prefix
-        default use F_GT_rect, SIFT_keypoints
+        defaulted use F_GT_rect, SIFT_keypoints
         '''
         try:
             self.X.all()
         except AttributeError:
             self.load_img_patch()
 
-        img_left = self.X[img_index,:,:,0]
-        img_right = self.X[img_index,:,:,0]
+        img_left = np.zeros((self.X.shape[1],self.X.shape[2],3))
+        img_right = np.zeros((self.X.shape[1],self.X.shape[2],3))
+        img_left[:,:,0] = self.X[img_index,:,:,0]
+        img_left[:,:,1] = img_left[:,:,0]
+        img_left[:,:,2] = img_left[:,:,1]
+        img_right[:,:,0] = self.X[img_index,:,:,1]
+        img_right[:,:,1] = img_right[:,:,0]
+        img_right[:,:,2] = img_right[:,:,1]
         
         try: 
             self.F.all()
         except AttributeError:
             self.F_GT_rected_get()
+            print("load F_GT")
         
         try:
             self.match_pts1.all()
         except AttributeError:
             self.exact_match_points_sift(img_index)
+            print("load matching points")
         
+        # if len(self.match_pts1) < 10:
+        #     img_index+=1
+        #     self.exact_match_points_sift(img_index)
+
         pts1, pts2 = self.match_pts1, self.match_pts2
         save_path = self.save_path
 
@@ -327,7 +341,8 @@ class KittiAnalyse(object):
 
         img5, img6 = self.drawlines(img_left,img_right,lines1,pts1,pts2)
 
-        cv2.imwrite(save_path+save_prefix+'Left.jpg',img5)
+        print('Imgs saved in: ',os.path.join(save_path,'xxxx.jpg'))
+        cv2.imwrite(os.path.join(save_path,save_prefix+'Left.jpg'),img5)
 
         lines2 = cv2.computeCorrespondEpilines(pts1.reshape(-1,1,2), 2, self.F)
         lines2 = lines2.reshape(-1,3)
@@ -335,7 +350,7 @@ class KittiAnalyse(object):
         
         img3, img4 = self.drawlines(img_right,img_left,lines2,pts2,pts1)
 
-        cv2.imwrite(save_path+save_prefix+'Right.jpg',img3)
+        cv2.imwrite(os.path.join(save_path,save_prefix+'Right.jpg'),img3)
 
 
     def metrics_ep_cons(self,img_index):
@@ -366,6 +381,13 @@ class KittiAnalyse(object):
             err += np.abs(np.dot(hp2.T, np.dot(self.F, hp1)))
         
         return err / float(len(pts1))
+
+
+    def half_sym_epipolar_dist(self,img_index):
+        pass
+
+
+
 
     def metrics_ep_dist(self,img_index):
         '''
@@ -399,13 +421,119 @@ class KittiAnalyse(object):
         return err / float(len(pts1))
     
 
+    def MP_move(self, dist=1):
+        '''
+        move matching points to test metric
+        '''
+        for i in range(self.match_pts1.shape[0]):
+            self.match_pts2[i,0] += dist
+            # print("before move: %d" %self.match_pts2[i,1])
+            self.match_pts2[i,1] += dist
+            # print("after move: %d" %self.match_pts2[i,1])
+            if self.match_pts2[i,0] > self.shape[0]:
+                self.match_pts2[i,0] = self.shape[0]
+            if self.match_pts2[i,1] > self.shape[1]:
+                self.match_pts2[i,1] = self.shape[1]
+
 
 if __name__ == "__main__":
-    kf = KittiAnalyse(imgpath, calib_path, save_path, label='RAW')
-    img_index = 10
-    kf.load_img_patch()
-    kf.get_good_match(img_index)
-    kf.draw_epipolar_lines(img_index,'F_GT_P_SIFT_index'+str(img_index)+'_Optim')
-    print('epipolar constraint: ', kf.metrics_ep_cons(img_index))
-    print('epipolar distance: ', kf.metrics_ep_dist(img_index))
 
+    # imgpath = r'D:\F_Estimation\deepF_noCorrs\data\kitti\2011_09_26\2011_09_26_drive_0051_sync\\'
+
+    imgpath = r'D:\F_Estimation\UnrectifiedData\2011_09_26_drive_0001_extract\2011_09_26\2011_09_26_drive_0001_extract'
+    # imgpath = r"D:\F_Estimation\deepF_noCorrs\data\Pred\Pred1_12_07\\"
+    # for RAW DATA all images have the same calib_flie
+    calib_path = r'D:\F_Estimation\deepF_noCorrs\data\kitti\2011_09_26\calib_cam_to_cam.txt' 
+
+    save_path = r'D:\F_Estimation\deepF_noCorrs\Code\Util\Kitti_ana\Result\Visualization'
+
+    F_path = r'D:\F_Estimation\deepF_noCorrs\Pred_Result\Simaese_suss\0.txt' # F_Simaese_suss
+    # F_path = r'D:\F_Estimation\deepF_noCorrs\Pred_Result\F_GT_Changed_SingleNet.txt' # F_Single
+    # F_path = r'D:\F_Estimation\deepF_noCorrs\Pred_Result\Simaese_eclossw-3_goodsave_suss\0.txt' # F_epc_loss_suss
+    # F_path = r'D:\F_Estimation\deepF_noCorrs\Pred_Result\Simaese_edW-3_fix\0.txt' # F_epd_loss
+
+    # F_name = 'F_GT_testF'
+    # F_name = 'F_Simaese_suss'
+    # F_name = 'F_RANSAC'
+    # F_name = 'F_GT'
+    F_name = 'F_ecloss_suss'
+
+    save_path = os.path.join(save_path,F_name)
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+    print('saved in:',save_path)
+    kf = KittiAnalyse(imgpath, calib_path, save_path, label='RAW')
+    img_index = 4 
+    '''
+    D:\F_Estimation\deepF_noCorrs\data\kitti\2011_09_26\2011_09_26_drive_0051_sync\\0000000004.png
+    RANSAC 失效
+    '''
+    kf.load_img_patch()
+    kf.get_good_match(img_index) # load matching points and get good match
+
+    
+    save_prefix = F_name + '_P_SIFT_index' + str(img_index)+'Unrect'#+ '_Optim' #+ 'traindata'
+
+
+    # # test F 
+    # for i in range(10):
+    #     kf.F_GT_rected_get()
+    #     F_G = kf.F.copy()
+    #     kf.F += i/10.
+    #     L1_loss = abs(np.sum(F_G - kf.F) / 9.)
+
+    #     ep_c = kf.metrics_ep_cons(img_index)
+    #     ep_d = kf.metrics_ep_dist(img_index)
+
+    #     TxtName = os.path.join(save_path,save_prefix+'.txt')
+
+    #     print("Write in txt file: %s" %TxtName)
+    #     with open(TxtName, 'a') as f:
+    #         f.truncate()
+    #     with open(TxtName, 'a') as f:
+    #         f.write('\nUse '+F_name+',ImgIndex='+str(img_index))
+    #         f.write('\nF change: '+str(i/10))
+    #         f.write('\nL1loss: '+str(L1_loss))
+    #         f.write('\nepipolar constraint: '+str(ep_c))
+    #         f.write('\nepipolar distance: '+str(ep_d))
+
+    # load F
+    print('load %r is :' %save_prefix ,kf.F_load(F_path ))
+    
+    # # Estimation F
+    # kf.exact_match_points_sift(img_index)
+    # print("F Estimation with RANSAC: ",kf.F_ES())
+
+    kf.draw_epipolar_lines(img_index, save_prefix)
+    ep_c = kf.metrics_ep_cons(img_index)
+    ep_d = kf.metrics_ep_dist(img_index)
+    print('epipolar constraint: ', ep_c)
+    print('epipolar distance: ', ep_d)
+
+    TxtName = os.path.join(save_path,save_prefix+'.txt')
+
+    print("Write in txt file: %s" %TxtName)
+    with open(TxtName, 'w') as f:
+        f.write('Use '+F_name+',ImgIndex='+str(img_index))
+        f.write('\nepipolar constraint: '+str(ep_c))
+        f.write('\nepipolar distance: '+str(ep_d))
+
+
+    # # test Metrics
+    # for i in range(0,10):
+    #     kf.MP_move(i) 
+    #     save_prefix = F_name + '_P_SIFT_index' + str(img_index) + '_Optim'
+    #     save_prefix += '_move%s' %i
+    #     kf.draw_epipolar_lines(img_index, save_prefix)
+    #     ep_c = kf.metrics_ep_cons(img_index)
+    #     ep_d = kf.metrics_ep_dist(img_index)
+    #     print('epipolar constraint: ', ep_c)
+    #     print('epipolar distance: ', ep_d)
+
+    #     TxtName = os.path.join(save_path,save_prefix+'.txt')
+
+    #     print("Write in txt file: %s" %TxtName)
+    #     with open(TxtName, 'w') as f:
+    #         f.write('Use '+F_name+',ImgIndex='+str(img_index))
+    #         f.write('\nepipolar constraint: '+str(ep_c))
+    #         f.write('\nepipolar distance: '+str(ep_d))

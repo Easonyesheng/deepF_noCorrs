@@ -75,8 +75,8 @@ class SingleFNet(object):
             self.y = tf.placeholder(tf.float32, shape=(
                      [None] + list(self.tr_data_loader.fmat_shape())))
         
-            self.bp1 = tf.placeholder(tf.float32, shape=([4,54,2]), name='bp1')
-            self.bp2 = tf.placeholder(tf.float32, shape=([4,54,2]), name='bp2')
+            self.bp1 = tf.placeholder(tf.float32, shape=([4,10,2]), name='bp1')
+            self.bp2 = tf.placeholder(tf.float32, shape=([4,10,2]), name='bp2')
 
             print("Building training graph...")
             self.y_, self.loss, self.l1_loss, self.l2_loss, self.ep_loss = \
@@ -129,9 +129,37 @@ class SingleFNet(object):
         '''
         add the loss of epi_constraint_abs
         '''
-        # bx, by, bp1, bp2 = self.tr_data_loader(self.batch_size)
-        # # a, e_c_loss, b = epipolar_constraint_abs(y_, by, bp1 ,bp2)
-        # # r_score, m_score, base_score = m(fmat, by, bp1, bp2)
+        # pts1 = self.bp1
+        # pts2 = self.bp2
+        # # pts1 = bp1.reshape([-1,2])
+        # # pts2 = bp2.reshape([-1,2])
+        # print(pts1.shape)
+        # err = 0.
+        # e_c_loss = 0.
+        # count = 0
+        # epsilon = 1e-5
+        # # door = tf.constant([[0.15]], dtype=tf.float32)
+        # a = tf.constant([[1]], dtype=tf.float32)
+        # #(len(pts2)/4)
+        # for i in range(self.batch_size):
+        #     for j in range(10):
+        #         # door = tf.constant(0.15, dtype=tf.float32)
+        #         p1 = pts1[i,j,:]
+        #         p2 = pts2[i,j,:]
+        #         p1 = tf.reshape(p1,[2,1])
+        #         p2 = tf.reshape(p2,[2,1])
+        #         p1 = tf.concat([p1,a],0)
+        #         p2 = tf.concat([p2,a],0)
+        #         y_re = tf.reshape(y_, [self.batch_size,3,3])
+
+        #         # calculate the symmetric epipolar distance
+        #         err += tf.abs(tf.matmul(tf.transpose(p2), tf.matmul(y_re[i,:,:], p1)))
+        #         count+=1#*door
+        #     e_c_loss += err
+            
+        # count *= self.batch_size
+        # e_c_loss = (e_c_loss[0,0]/count)*self.ep_weight
+
         # err = 0.0
         # e_c_loss = 0.0
         # count = 0.0
@@ -156,7 +184,7 @@ class SingleFNet(object):
         '''
         add loss of sym_epipolar_dist
         '''
-        # bx, by, bp1, bp2 = self.tr_data_loader(self.batch_size)
+        
         pts1 = self.bp1
         pts2 = self.bp2
         # pts1 = bp1.reshape([-1,2])
@@ -170,50 +198,36 @@ class SingleFNet(object):
         a = tf.constant([[1]], dtype=tf.float32)
         #(len(pts2)/4)
         for i in range(self.batch_size):
-            for j in range(54):
-                door = tf.constant(0.15, dtype=tf.float32)
+            for j in range(10):
+                # door = tf.constant(0.15, dtype=tf.float32)
                 p1 = pts1[i,j,:]
                 p2 = pts2[i,j,:]
                 p1 = tf.reshape(p1,[2,1])
                 p2 = tf.reshape(p2,[2,1])
                 p1 = tf.concat([p1,a],0)
                 p2 = tf.concat([p2,a],0)
-                # print('p1 shape:',p1.shape)
-                # p1 = tf.reshape(p1,[3,1])
-                # p2 = tf.reshape(p2,[3,1])
-                # print('type ',type(p1[0,0]))
-                # hp1, hp2 = np.ones([3,1],dtype=np.float32), np.ones([3,1],dtype=np.float32)
-                # hp1[:2,0], hp2[:2,0] = p1, p2
-                # hp1[0,0], hp2[0,0] = p1[0], p2[0]
-                # hp1[1,0], hp2[1,0] = p1[1], p2[1]
                 y_re = tf.reshape(y_, [self.batch_size,3,3])
 
-                # use Gt to choose matching points
-                y_gt = tf.reshape(self.y, [self.batch_size,3,3])
-                err_gt = tf.abs(tf.matmul(tf.transpose(p2), tf.matmul(y_gt[i,:,:], p1)))
-                thre = err_gt[0,0]
-                # print(thre.shape)
-                # print(type(thre))
-                def f1(): return door-0.15
-                def f2(): return tf.add(door, 0.85)
-                result = tf.cond(thre > door, f1, f2)
-                # print(door)
-                fp, fq = tf.matmul(y_re[i,:,:], p1), tf.matmul(tf.transpose(y_re[i,:,:]),p2)
-                sym_jjt = 1./(fp[0]**2 + fp[1]**2 + epsilon) + 1./(fq[0]**2 + fq[1]**2 + epsilon)
-                err = err + ((tf.matmul(tf.transpose(p2), tf.matmul(y_re[i,:,:], p1))**2) * (sym_jjt + epsilon))*door
-                count+=1*door
+                # calculate the symmetric epipolar distance
+                #fp, fq = tf.matmul(y_re[i,:,:], p1), tf.matmul(tf.transpose(y_re[i,:,:]),p2)
+                fp = tf.matmul(y_re[i,:,:], p1) # only take one side
+                sym_jjt = 1./tf.sqrt((fp[0]**2 + fp[1]**2 + epsilon)) #+ 1./(fq[0]**2 + fq[1]**2 + epsilon)
+                err = err + tf.abs(((tf.matmul(tf.transpose(p2), tf.matmul(y_re[i,:,:], p1)))) * (sym_jjt + epsilon))#*door
+                count+=1#*door
             e_d_loss += err
-            print("Use ",count," Points")
+            
         count *= self.batch_size
         e_d_loss = (e_d_loss[0,0]/count)*self.ep_weight
 
-        loss = l1_loss + l2_loss + e_d_loss
+        # sum the loss
+        loss = l1_loss + l2_loss + e_d_loss#+ e_c_loss
         # only use ep_loss
         # loss = e_c_loss
 
         return y_, loss, l1_loss, l2_loss, e_d_loss
 
     def validate(self, iters, best_score, val_data_loader=None):
+        val_save_flag = False
         if val_data_loader == None:
             val_data_loader = self.val_data_loader
 
@@ -261,10 +275,15 @@ class SingleFNet(object):
             print("\t%s\t%.5f %.5f %.5f"\
                   %(k, r/float(num_batches), s/float(num_batches), v/float(num_batches)))
             
+            if  s/float(num_batches) < best_score[ind][1] and ind % 2 == 0:
+                val_save_flag = True
+                print(ind)
+
             best_score[ind][0] = min(r/float(num_batches), best_score[ind][0])
             best_score[ind][1] = min(s/float(num_batches), best_score[ind][1])
             best_score[ind][2] = min(v/float(num_batches), best_score[ind][2])
             ind += 1
+
 
             output_data[k]['pred'] = s/float(num_batches)
             output_data[k]['gtrs'] = v/float(num_batches)
@@ -276,9 +295,10 @@ class SingleFNet(object):
         # save_file = os.path.join(save_path, "val-iteres%d.npy"%iters)
         # np.save(save_file, output_data)
 
-        return best_score
+        return best_score, val_save_flag
 
     def test(self, iters, best_score, test_data_loader=None):
+        test_save_flag = False
         if test_data_loader == None:
             test_data_loader = self.test_data_loader
 
@@ -321,6 +341,10 @@ class SingleFNet(object):
             print("\t%s\t%.5f %.5f %.5f"\
                   %(k, r/float(num_batches), s/float(num_batches), v/float(num_batches)))
             
+            if  s/float(num_batches) < best_score[ind][1] and ind%2 == 0 :
+                test_save_flag = True
+                print(ind)
+
             best_score[ind][0] = min(r/float(num_batches), best_score[ind][0])
             best_score[ind][1] = min(s/float(num_batches), best_score[ind][1])
             best_score[ind][2] = min(v/float(num_batches), best_score[ind][2])
@@ -336,7 +360,7 @@ class SingleFNet(object):
         # save_file = os.path.join(save_path, "val-iteres%d.npy"%iters)
         # np.save(save_file, output_data)
 
-        return best_score
+        return best_score, test_save_flag
 
     def train(self, epoches=10, log_interval=10):
         ttl_iter = 0
@@ -377,8 +401,8 @@ class SingleFNet(object):
                         self.tr_log_writer.add_summary(summary, ttl_iter)
                     self.sess.run(self.train_op, feed_dict)
 
-                best_score_val = self.validate(epo, best_score_val)
-                best_score_test = self.test(epo, best_score_test)
+                best_score_val, val_save_flag = self.validate(epo, best_score_val)
+                best_score_test, test_save_flag = self.test(epo, best_score_test)
                 
                 scores   =  { k:0 for k in self.metrics.keys() }
                 ind = 0
@@ -395,7 +419,7 @@ class SingleFNet(object):
                     ind += 1
 		
 		
-                if epo % 10 == 0:
+                if val_save_flag or test_save_flag:
                     print("Saving the model...")
                     save_path = "log\%s" %self.prefix # \ for windows and / for linux & Mac
                     #save the model

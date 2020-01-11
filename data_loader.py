@@ -166,4 +166,9 @@ def make_povray_datasets(data_path=os.path.join(CFD, "data","batch2"),
 '''
 if __name__ == "__main__":
     tr, val, te = make_kitti_datasets()
-
+    num_batches = len(te) // 5
+    for i in range(num_batches):
+        x, y, p1, p2 = te(batch_size=4)
+        print(p1.shape)
+        print(type(p1))
+    print(num_batches)

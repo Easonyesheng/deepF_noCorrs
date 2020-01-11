@@ -379,6 +379,7 @@ def make_kitti_data_loader(size=(128,128), norm="norm"):
     X, Y = X.astype(np.float32), Y.astype(np.float32)
     tot_len = len(P1_lst)
     # cut the data by the length of matching points list's length ?
+    # P1_lst is a [nums of imgs, nums of points per img, 2]
     X, Y = X[:tot_len, :], Y[:tot_len, :]
     # 
     

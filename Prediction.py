@@ -10,13 +10,13 @@ import data_loader
 
 
 MateName = ''
-ModelPath = r'D:\F_Estimation\deepF_noCorrs\Code\log\Simaese_epW-1_b4_lr-4_e200_time1578367107'
+ModelPath = r'D:\F_Estimation\deepF_noCorrs\Code\log\oneside_edloss_sqrt_W-5_lr-5_time1578644678'
 
 DataPath = 'D:\\F_Estimation\\deepF_noCorrs\\pred_npy\\norm'
 
 savepath = 'D:\\F_Estimation\\deepF_noCorrs\\Pred_Result\\'
 
-keywords = 'Single_epW-1'
+keywords = 'onesqrt_edw-5'
 
 def img_prep(img_path, target_size = (256, 256)):
     img = cv2.imread(img_path, 0)
